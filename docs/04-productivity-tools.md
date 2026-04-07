@@ -157,6 +157,79 @@ graph LR
 └── ...
 ```
 
+### 모노레포 & 하위 CLAUDE.md 전략
+
+Claude Code는 CLAUDE.md를 **계층적으로 로드**한다. 이를 활용하면 대규모 프로젝트나 모노레포에서도 효과적으로 컨텍스트를 관리할 수 있다.
+
+#### 로드 순서
+
+```
+1. ~/.claude/CLAUDE.md          ← 전역 (모든 프로젝트 공통)
+2. 프로젝트루트/CLAUDE.md       ← 프로젝트 전체 컨텍스트
+3. 작업디렉토리/CLAUDE.md       ← 현재 작업 중인 영역의 추가 컨텍스트
+```
+
+#### 루트 vs 하위에 넣을 내용
+
+| 위치 | 넣을 내용 | 넣지 말 내용 |
+|------|----------|-------------|
+| **루트 CLAUDE.md** | 기술 스택, 전체 구조, 공통 컨벤션, 빌드/실행 명령 | 특정 모듈의 상세 패턴 |
+| **하위 CLAUDE.md** | 해당 디렉토리 고유의 패턴, 컨벤션, 주의사항 | 루트에 이미 있는 내용 (중복 금지) |
+| **전역 CLAUDE.md** | 모든 프로젝트에 적용되는 개인 코딩 스타일 | 프로젝트별 설정 |
+
+#### 모노레포 예시 (프론트/백 분리)
+
+```
+monorepo/
+├── CLAUDE.md                    ← 전체 프로젝트 개요, 공통 규칙
+│
+├── packages/
+│   ├── frontend/
+│   │   ├── CLAUDE.md            ← React 컨벤션, 컴포넌트 패턴, 스타일링 규칙
+│   │   └── src/
+│   │
+│   ├── backend/
+│   │   ├── CLAUDE.md            ← FastAPI 컨벤션, 라우터→서비스→모델 규칙
+│   │   └── app/
+│   │
+│   └── shared/
+│       ├── CLAUDE.md            ← 공유 타입, 유틸 규칙
+│       └── src/
+│
+└── docs/                        ← PRD, 아키텍처, ERD는 여기
+```
+
+**루트 CLAUDE.md (간결하게):**
+```markdown
+# MyApp 모노레포
+
+## 구조
+- packages/frontend — React 18, Next.js 14
+- packages/backend — Python, FastAPI
+- packages/shared — 공유 TypeScript 타입
+
+## 공통 규칙
+- 커밋 메시지: Conventional Commits
+- PR은 반드시 테스트 통과 후 머지
+- 패키지 간 의존성: shared → frontend, shared → backend (역방향 금지)
+```
+
+**packages/frontend/CLAUDE.md (프론트 고유):**
+```markdown
+# Frontend 컨텍스트
+
+## 패턴
+- 컴포넌트: 함수형 + TypeScript, Props 인터페이스 필수
+- 상태: Zustand (전역), React Query (서버 상태)
+- 스타일: TailwindCSS, cn() 유틸로 조건부 클래스
+
+## 주의
+- any 금지, 서버 컴포넌트에서 useState/useEffect 금지
+- API 호출은 반드시 lib/api-client.ts 경유
+```
+
+> **핵심 원칙**: 루트 CLAUDE.md는 "이 프로젝트가 뭔지" 알려주고, 하위 CLAUDE.md는 "이 폴더에서 작업할 때 추가로 알아야 할 것"을 알려준다. **내용을 중복하지 마라** — 에이전트가 양쪽을 모두 읽으므로 중복은 컨텍스트 낭비다.
+
 ### 문서 업데이트 주기
 
 | 문서 | 업데이트 트리거 |
