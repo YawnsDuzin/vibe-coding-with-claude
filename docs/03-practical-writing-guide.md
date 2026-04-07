@@ -383,7 +383,214 @@ status 필드의 상태 전이 규칙(pending→paid→shipped→delivered)을 �
 
 ---
 
-## 3.5 문서 간 연결 구조
+## 3.5 API 명세서 (권장)
+
+### 템플릿
+
+````markdown
+# [프로젝트명] API 명세서
+
+## 공통 사항
+
+### Base URL
+- 개발: `http://localhost:8000/api`
+- 운영: `https://api.example.com/api`
+
+### 인증
+- Bearer Token (JWT)
+- 헤더: `Authorization: Bearer {access_token}`
+- 토큰 만료: access 30분, refresh 7일
+
+### 공통 에러 응답
+| 코드 | 의미 | 응답 예시 |
+|------|------|----------|
+| 401 | 인증 실패 | `{"detail": "Not authenticated"}` |
+| 403 | 권한 없음 | `{"detail": "Permission denied"}` |
+| 404 | 리소스 없음 | `{"detail": "Not found"}` |
+| 422 | 유효성 검증 실패 | `{"detail": [{"field": "email", "msg": "invalid format"}]}` |
+
+---
+
+## 엔드포인트
+
+### 인증 (Auth)
+
+#### POST /auth/login
+로그인하여 JWT 토큰을 발급받는다.
+
+**Request:**
+```json
+{
+    "email": "user@example.com",
+    "password": "password123"
+}
+```
+
+**Response (200):**
+```json
+{
+    "access_token": "eyJ...",
+    "refresh_token": "eyJ...",
+    "token_type": "bearer"
+}
+```
+
+**에러:**
+- 401: 이메일 또는 비밀번호 불일치
+
+---
+
+### 사용자 (Users)
+
+#### GET /users/me
+현재 로그인한 사용자 정보 조회. 인증 필요.
+
+**Response (200):**
+```json
+{
+    "id": 1,
+    "email": "user@example.com",
+    "name": "홍길동",
+    "role": "user",
+    "created_at": "2024-01-15T09:00:00Z"
+}
+```
+
+---
+
+### 주문 (Orders)
+
+#### GET /orders
+내 주문 목록 조회. 인증 필요. 페이지네이션 지원.
+
+**Query Parameters:**
+| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
+|---------|------|:---:|-------|------|
+| page | int | N | 1 | 페이지 번호 |
+| size | int | N | 20 | 페이지당 항목 수 (최대 100) |
+| status | string | N | — | 상태 필터 (pending, paid, shipped 등) |
+
+**Response (200):**
+```json
+{
+    "items": [
+        {
+            "id": 1,
+            "status": "paid",
+            "total_amount": 35000,
+            "ordered_at": "2024-02-01T14:30:00Z"
+        }
+    ],
+    "total": 42,
+    "page": 1,
+    "size": 20
+}
+```
+
+#### POST /orders
+새 주문 생성. 인증 필요.
+
+**Request:**
+```json
+{
+    "items": [
+        {"product_id": 1, "quantity": 2},
+        {"product_id": 5, "quantity": 1}
+    ],
+    "shipping_address": "서울시 강남구 역삼동 123-45"
+}
+```
+
+**Response (201):**
+```json
+{
+    "id": 43,
+    "status": "pending",
+    "total_amount": 55000,
+    "ordered_at": "2024-02-15T10:00:00Z"
+}
+```
+
+**에러:**
+- 400: 재고 부족 `{"detail": "Insufficient stock for product_id: 5"}`
+````
+
+### 작성 팁
+
+- **공통 사항을 먼저 정리하라**: Base URL, 인증, 에러 코드를 한 번만 쓰면 엔드포인트별 중복이 줄어듦
+- **요청/응답 JSON 예시를 반드시 포함하라**: 에이전트가 타입을 정확히 파악
+- **에러 케이스를 명시하라**: 에이전트가 프론트엔드 에러 핸들링 코드를 정확히 생성
+- **페이지네이션 규격을 통일하라**: 모든 목록 API에 동일한 파라미터/응답 구조 적용
+
+### 에이전트에게 전달하는 방법
+
+```
+# 프론트엔드 API 연동 시 프롬프트 예시
+"docs/api-spec.md의 '주문 (Orders)' 섹션을 참고해서
+주문 목록 페이지의 데이터 페칭 훅(useOrders)을 구현해줘.
+페이지네이션, 상태 필터, 에러 핸들링을 포함해줘."
+```
+
+---
+
+## 3.6 Decision Log (권장)
+
+### 템플릿
+
+````markdown
+# [프로젝트명] Decision Log
+
+> 주요 기술 결정과 그 이유를 기록한다.
+> "3개월 뒤의 나"와 "코딩 에이전트"가 참조하는 문서.
+
+## 결정 기록
+
+### [DEC-001] 상태 관리 라이브러리 선택
+- **날짜**: 2024-01-10
+- **결정**: Zustand 채택 (Redux, Jotai 대신)
+- **이유**: 
+  - 보일러플레이트가 적어 1인 개발에 적합
+  - Redux는 오버스펙 (미들웨어, 액션 타입 등 불필요)
+  - Jotai는 atom 단위가 너무 세분화됨
+- **영향**: 전역 상태는 `src/stores/` 에 Zustand store로 관리
+
+### [DEC-002] DB를 PostgreSQL에서 SQLite로 변경
+- **날짜**: 2024-02-05
+- **결정**: 개발 환경 DB를 SQLite로 변경
+- **이유**:
+  - 1인 개발에서 Docker로 PostgreSQL 띄우는 것이 번거로움
+  - 데이터 규모가 작아 SQLite로 충분
+  - 운영 환경만 PostgreSQL 유지
+- **영향**: SQLAlchemy dialect 분기 처리 필요, 마이그레이션 양쪽 테스트
+
+### [DEC-003] 인증 방식 변경
+- **날짜**: 2024-03-01
+- **결정**: 세션 기반 → JWT 기반으로 전환
+- **이유**:
+  - 향후 모바일 앱 추가 가능성 대비
+  - 서버 stateless 유지
+- **영향**: auth 모듈 전면 교체, 기존 세션 코드 제거
+````
+
+### 작성 팁
+
+- **결정 번호를 매겨라** (DEC-001): 다른 문서나 프롬프트에서 "DEC-002 참조"로 인용 가능
+- **"이유"에 기각된 대안도 쓰라**: "왜 Redux를 안 썼는가"가 향후 재논의를 방지
+- **"영향"을 반드시 기록하라**: 에이전트가 관련 코드를 찾는 데 활용
+- **모든 결정을 기록할 필요 없다**: 아키텍처에 영향을 주는 결정만
+
+### 에이전트에게 전달하는 방법
+
+```
+# 기술 변경 시 프롬프트 예시
+"docs/decisions.md의 DEC-003을 참고해.
+세션 기반 인증을 JWT로 전환해야 해.
+auth 모듈을 교체하고, 기존 세션 관련 코드를 제거해줘."
+```
+
+---
+
+## 3.7 문서 간 연결 구조
 
 ```mermaid
 graph LR
@@ -394,6 +601,9 @@ graph LR
     B -->|"기능 목록"| E["에이전트 프롬프트"]
     C -->|"구조 참조"| E
     D -->|"DB 스키마"| E
+    
+    G["api-spec.md<br/>(API 계약)"] -->|"인터페이스"| E
+    H["decisions.md<br/>(왜 이렇게?)"] -.->|"배경 참조"| E
     
     E --> F["코드 생성"]
     
