@@ -645,4 +645,112 @@ graph LR
 
 ---
 
+## 부록: 나쁜 문서 vs 좋은 문서 (Before / After)
+
+> 실제로 자주 보이는 나쁜 패턴과, 같은 내용을 에이전트 친화적으로 고친 예시.
+
+### CLAUDE.md — Before (나쁜 예)
+
+```markdown
+# 내 프로젝트
+
+웹 프로젝트입니다. React랑 Node 사용합니다.
+코드 깔끔하게 짜주세요.
+DB는 몽고DB 쓰다가 포스트그레로 바꿀 수도 있어요.
+테스트는 나중에 할게요.
+```
+
+**문제점:**
+- 프로젝트 구조 없음 → 에이전트가 파일 위치를 추측
+- "깔끔하게"는 해석 불가능한 지시
+- DB가 미정 → 에이전트가 어떤 ORM/쿼리를 써야 할지 모름
+- 버전 정보 없음 → React 18인지 19인지에 따라 코드가 다름
+
+### CLAUDE.md — After (좋은 예)
+
+```markdown
+# TaskFlow - 작업 관리 웹앱
+
+## 기술 스택
+- **Frontend**: React 18, TypeScript 5.4, TailwindCSS 3.4
+- **Backend**: Node.js 20, Express 4, Prisma ORM
+- **DB**: PostgreSQL 16
+- **테스트**: Vitest (unit), Playwright (e2e)
+
+## 프로젝트 구조
+```
+src/
+├── client/           # React SPA
+│   ├── components/   # UI 컴포넌트 (함수형만)
+│   ├── hooks/        # Custom hooks
+│   └── pages/        # 라우트별 페이지
+├── server/           # Express API
+│   ├── routes/       # 엔드포인트
+│   ├── services/     # 비즈니스 로직
+│   └── prisma/       # 스키마, 마이그레이션
+```
+
+## 컨벤션
+- 컴포넌트: 함수형 + TypeScript, Props 인터페이스 필수
+- API 응답: { data, error, message } 통일 포맷
+- 에러 처리: 커스텀 AppError 클래스 사용
+- any 타입 사용 금지, unknown 후 타입 가드 사용
+
+## 빌드 & 실행
+- `npm run dev` — 프론트+백 동시 실행
+- `npm test` — Vitest 실행
+- `npx prisma migrate dev` — DB 마이그레이션
+```
+
+---
+
+### PRD — Before (나쁜 예)
+
+```markdown
+# 기능
+
+- 로그인
+- 회원가입
+- 게시판
+- 댓글
+- 알림
+- 검색
+- 설정
+- 관리자 페이지
+- 통계
+- 다국어
+- 다크모드
+```
+
+**문제점:**
+- 우선순위 없음 → 에이전트가 뭘 먼저 할지 모름
+- 완료 기준 없음 → "게시판"이 어디까지인지 불명확
+- 11개 기능 나열 → 1인 개발로는 비현실적
+- 기술 제약 없음 → 에이전트가 임의로 기술 선택
+
+### PRD — After (좋은 예)
+
+```markdown
+# TaskFlow PRD
+
+## P0 (MVP — 2주 내 완료)
+| # | 기능 | 완료 기준 |
+|---|------|----------|
+| 1 | 이메일 로그인 | JWT 발급, 토큰으로 API 호출 가능 |
+| 2 | 작업 CRUD | 작업 생성/조회/수정/삭제, 상태 변경(todo→doing→done) |
+| 3 | 작업 목록 | 상태별 칸반 보드, 드래그 앤 드롭 |
+
+## P1 (MVP 이후)
+| # | 기능 | 완료 기준 |
+|---|------|----------|
+| 4 | 작업 검색 | 키워드 + 상태 필터, 결과 하이라이트 |
+| 5 | 알림 | 마감일 24시간 전 이메일 알림 |
+
+## 제약사항
+- 결제/과금 기능 없음 (무료 서비스)
+- 인증은 이메일+비밀번호만 (소셜 로그인은 P2)
+```
+
+---
+
 [다음: 04. 문서 작성 생산성 도구 →](./04-productivity-tools.md)
